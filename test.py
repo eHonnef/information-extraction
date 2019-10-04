@@ -3,7 +3,8 @@ from bs4 import BeautifulSoup
 import subprocess
 import re
 import os
-# from keras.utils import get_file
+import stanfordnlp
+from keras.utils import get_file
 
 
 def download_articles(limit=None):
@@ -20,14 +21,22 @@ def download_articles(limit=None):
 
   file_folder = "C:/projects/information-extraction/new/data/"
   # Downloading only the articles
+  count = 0
   for link in soup_dump.find_all(
-      'a', {'href': re.compile(r".*pages-articles\d\.xml-p.*\.bz2$")},
+      'a', {'href': re.compile(r".*pages-articles\d*\.xml-p.*\.bz2$")},
       limit=limit):
+    count += 1
     path = file_folder + link["href"]
     if not os.path.exists(path):
       print("Downloading: " + link["href"])
-      get_file(path, dump_url + link["href"])
-      print("File size: " + str(os.stat(path).st_size / 1e6) + " MB")
+      # get_file(path, dump_url + link["href"])
+      # print("File size: " + str(os.stat(path).st_size / 1e6) + " MB")
+  
+  print(count)
+
+
+def download_dictionary(language, location):
+  stanfordnlp.download(language, resource_dir=location)
 
 
 # file = "./data/enwiki-latest-pages-articles15.xml-p7744803p9244803.bz2"
@@ -35,11 +44,9 @@ def download_articles(limit=None):
 # for line in subprocess.Popen(["bzcat"], stdin=open(file), stdout=subprocess.PIPE).stdout:
 #   print(line)
 
-# download_articles()
-
-import stanfordnlp
-
-stanfordnlp.download("en", resource_dir="./stanfordnlp_resources")
+download_articles()
+'''
 nlp = stanfordnlp.Pipeline(models_dir="./stanfordnlp_resources/")
 doc = nlp("I just wanted an ice-cream. Because she likes it.")
-doc.sentences[0].print_dependencies()
+for sentence in doc.sentences:
+  print(sentence.print_dependencies())'''
