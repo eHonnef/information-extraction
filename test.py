@@ -4,10 +4,12 @@ import subprocess
 import re
 import os
 import stanfordnlp
-from keras.utils import get_file
 
 
 def download_articles(limit=None):
+  # It's faster if you don't use "tensorflow backend". Import when necessary.
+  from keras.utils import get_file
+
   base_url = 'https://dumps.wikimedia.org/enwiki/'
   index = requests.get(base_url).text
   soup_index = BeautifulSoup(index, 'html.parser')  # Find the links on the page
@@ -21,32 +23,52 @@ def download_articles(limit=None):
 
   file_folder = "C:/projects/information-extraction/new/data/"
   # Downloading only the articles
-  count = 0
   for link in soup_dump.find_all(
       'a', {'href': re.compile(r".*pages-articles\d*\.xml-p.*\.bz2$")},
       limit=limit):
-    count += 1
     path = file_folder + link["href"]
     if not os.path.exists(path):
       print("Downloading: " + link["href"])
-      # get_file(path, dump_url + link["href"])
-      # print("File size: " + str(os.stat(path).st_size / 1e6) + " MB")
-  
-  print(count)
+      get_file(path, dump_url + link["href"])
+      print("File size: " + str(os.stat(path).st_size / 1e6) + " MB")
 
 
 def download_dictionary(language, location):
   stanfordnlp.download(language, resource_dir=location)
 
 
-# file = "./data/enwiki-latest-pages-articles15.xml-p7744803p9244803.bz2"
+from WikiXmlHandler import WikiXmlHandler
+import xml.sax
+import mwparserfromhell
 
-# for line in subprocess.Popen(["bzcat"], stdin=open(file), stdout=subprocess.PIPE).stdout:
-#   print(line)
+files = os.listdir("./data")
 
-download_articles()
-'''
-nlp = stanfordnlp.Pipeline(models_dir="./stanfordnlp_resources/")
-doc = nlp("I just wanted an ice-cream. Because she likes it.")
+handler = WikiXmlHandler()
+parser = xml.sax.make_parser()
+parser.setContentHandler(handler)
+
+handler._pages
+# for file in files:
+for line in subprocess.Popen(["bzcat"],
+                             stdin=open("data/" + files[0]),
+                             stdout=subprocess.PIPE).stdout:
+  if len(handler._pages) > 1:
+    break
+
+  parser.feed(line)
+
+# print the page title
+print(handler._pages[1][0])
+
+# parse the wiki page
+wiki = mwparserfromhell.parse(handler._pages[1][1])
+
+# print the page text (or at least its first 1000 words)
+# print(wiki.strip_code())
+
+# download_articles()
+
+nlp = stanfordnlp.Pipeline(models_dir="./stanfordnlp_resources/", use_gpu=False)
+doc = nlp(wiki.strip_code())
 for sentence in doc.sentences:
-  print(sentence.print_dependencies())'''
+  print(sentence.print_dependencies())
