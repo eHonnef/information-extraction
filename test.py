@@ -41,34 +41,40 @@ from WikiXmlHandler import WikiXmlHandler
 import xml.sax
 import mwparserfromhell
 
-files = os.listdir("./data")
 
-handler = WikiXmlHandler()
-parser = xml.sax.make_parser()
-parser.setContentHandler(handler)
+def categorize():
 
-handler._pages
-# for file in files:
-for line in subprocess.Popen(["bzcat"],
-                             stdin=open("data/" + files[0]),
-                             stdout=subprocess.PIPE).stdout:
-  if len(handler._pages) > 1:
-    break
+  files = os.listdir("./data")
 
-  parser.feed(line)
+  handler = WikiXmlHandler()
+  parser = xml.sax.make_parser()
+  parser.setContentHandler(handler)
 
-# print the page title
-print(handler._pages[1][0])
+  handler._pages
+  # for file in files:
+  for line in subprocess.Popen(["bzcat"],
+                               stdin=open("data/" + files[0]),
+                               stdout=subprocess.PIPE).stdout:
+    if len(handler._pages) > 1:
+      break
 
-# parse the wiki page
-wiki = mwparserfromhell.parse(handler._pages[1][1])
+    parser.feed(line)
 
-# print the page text (or at least its first 1000 words)
-# print(wiki.strip_code())
+  # print the page title
+  print(handler._pages[1][0])
 
-# download_articles()
+  # parse the wiki page
+  wiki = mwparserfromhell.parse(handler._pages[1][1])
 
-nlp = stanfordnlp.Pipeline(models_dir="./stanfordnlp_resources/", use_gpu=False)
-doc = nlp(wiki.strip_code())
-for sentence in doc.sentences:
-  print(sentence.print_dependencies())
+  # print the page text (or at least its first 1000 words)
+  # print(wiki.strip_code())
+
+  # download_articles()
+
+  nlp = stanfordnlp.Pipeline(
+      models_dir="./stanfordnlp_resources/", use_gpu=False)
+  doc = nlp(wiki.strip_code())
+  for sentence in doc.sentences:
+    print(sentence.print_dependencies())
+
+categorize()
