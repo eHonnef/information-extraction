@@ -53,7 +53,7 @@ class ProcessArticle:
     # if page[2] != None:
     #   return None
 
-    if page[1].lower().startswith("list of"):
+    if page[0].lower().startswith("list of"):
       return None
 
     # parse page
