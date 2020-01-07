@@ -26,7 +26,7 @@ def download_dictionary(language, location):
   stanfordnlp.download(language, resource_dir=location)
 
 
-def download_articles(limit=None):
+def download_articles(download_folder, limit=None):
   # It's faster if you don't use "tensorflow backend". Import when necessary.
   from keras.utils import get_file
 
@@ -41,13 +41,13 @@ def download_articles(limit=None):
   # Convert to a soup
   soup_dump = BeautifulSoup(dump_html, 'html.parser')
 
-  file_folder = "C:/projects/information-extraction/new/data/"
+  # file_folder = pat
   # Downloading only the articles
   for link in soup_dump.find_all(
       'a',
       {'href': re.compile(r".*pages-articles-multistream\d*\.xml-p.*\.bz2$")},
       limit=limit):
-    path = file_folder + link["href"]
+    path = download_folder + link["href"]
     if not os.path.exists(path):
       print("Downloading: " + link["href"])
       get_file(path, dump_url + link["href"])

@@ -1,5 +1,6 @@
 __pycache__/
 data/
 stanfordnlp_resources/
+test_data/
 *.tsv
 *.csv
