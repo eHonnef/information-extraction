@@ -52,3 +52,11 @@ def download_articles(limit=None):
       print("Downloading: " + link["href"])
       get_file(path, dump_url + link["href"])
       print("File size: " + str(os.stat(path).st_size / 1e6) + " MB")
+
+
+def cleanhtml(raw_html):
+  cleanr = re.compile('<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')
+  cleantext = re.sub(cleanr, '', raw_html)
+  cleantext = re.sub(re.compile("\\n"), "", cleantext)
+  cleantext = cleantext.replace("\\", "")
+  return cleantext

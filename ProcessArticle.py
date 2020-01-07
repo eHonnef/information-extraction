@@ -1,66 +1,78 @@
 import pandas as pd
 import mwparserfromhell
-
-# just a stupid way to setup a "global variable", i don't want to make a class just for that
-infoboxes = []
+import Utils
 
 
-def init(infobox_file):
-  infoboxes = pd.read_csv(infobox_file)["infobox template name"].values.tolist()
+class ProcessArticle:
 
+  def __init__(self, infobox_file):
+    self.infoboxes = pd.read_csv(
+        infobox_file)["infobox template name"].values.tolist()
+    self.cols = [
+        "title", "type", "def words", "infobox_name", "infobox", "categories",
+        "wikilinks"
+    ]
 
-def process_article(page):
-  """
-    page[0] = title
-    page[1] = text
-    page[2] = page redirection (if it is a redirect article)
+  def process_nlp(self, text):
+    return None
 
-    return a pandas.DataFrame object
-  """
-  # Creating dataframe
-  df = pd.DataFrame(columns=[
-      "title", "type", "def words", "infobox", "categories", "wikilinks"
-  ])
-  # parse page
-  wiki = mwparserfromhell.parse(page[1])
+  def process_article(self, page):
+    """
+      page[0] = title
+      page[1] = text
+      page[2] = page redirection (if it is a redirect article)
 
-  # page title
-  df["title"] = [page[0]]
+      return a list object ordered like cols, returns None if it's not an article
+    """
+    # if page[2] != None:
+    #   return None
 
-  # defining article type
-  if page[2] != None:
-    df["type"] = ["redirect"]
-  else:
-    df["type"] = ["article"]
+    # parse page
+    wiki = mwparserfromhell.parse(page[1])
 
-  # Getting article categories
-  df["categories"] = [
-      "|".join([
-          list(filter(None, x.title.split(":")))[1]
-          for x in wiki.filter_wikilinks(matches="category")
+    # [0] page title
+    lst = [page[0]]
+
+    # defining article type
+    lst.append("article")
+
+    # [1] definition words
+    # lst.append(process_nlp(""))
+    lst.append("-")
+
+    # search for infobox template name
+    box = None
+    lst.append("-")  # [2] tmp append the infobox name
+
+    for template in wiki.filter_templates():
+      if template.name.strip_code().strip() in self.infoboxes:
+        box = wiki.filter_templates(matches=template.name.strip())[0]
+        lst[-1] = template.name.strip()
+        break
+
+    lst.append("-")  # [3] tmp append infobox items
+    if box != None:
+      box_items = "|".join([
+          "{}:{}".format(
+              param.name.strip_code().strip(),
+              param.value.strip_code(keep_template_params=True).strip())
+          for param in box.params
       ])
-  ]
+      lst[-1] = Utils.cleanhtml(box_items)
 
-  # wikilinks
-  df["wikilinks"] = "|".join(
-      [link.title.strip_code().strip() for link in wiki.filter_wikilinks()])
+    # [4] Getting article categories
+    lst.append("-")  # tmp append categories
+    lst[-1] = "|".join([
+        list(filter(None, x.title.split(":")))[-1]
+        for x in wiki.filter_wikilinks(matches="category")
+    ])
 
-  # external links
-  # df["ext_links"] = "|".join([link.url.strip_code().strip() for link in wiki.filter_external_links()])
+    # [5] wikilinks
+    lst.append("-")  # tmp append wikilinks
+    lst[-1] = "|".join([
+        link.title.strip_code().strip()
+        for link in wiki.filter_wikilinks()
+        if "Category:" not in link.title.strip_code().strip()
+    ])
 
-  # search for infobox template name
-  box = None
-  for template in wiki.filter_templates():
-    if template.name.strip() in infoboxes:
-      box = wiki.filter_templates(matches=template.name.strip())[0]
-      break
-
-  if box != None:
-    props = ""
-    for param in box.params:
-      props += "|{}:{}".format(param.name.strip_code().strip(),
-                               param.value.strip_code().strip())
-
-    df["infobox"] = props[1:]
-
-  return df
+    return lst
