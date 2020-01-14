@@ -59,6 +59,10 @@ class WikiDataXmlHandler(xml.sax.handler.ContentHandler):
       ran = 0
       k = "P31"
 
+      if isinstance(j["claims"], list):
+        print("it's a list (wtf?) {}".format(self._values['title']))
+        return
+
       if "P31" in j["claims"].keys():
         ran = len(j["claims"]["P31"])
         k = "P31"
@@ -73,17 +77,24 @@ class WikiDataXmlHandler(xml.sax.handler.ContentHandler):
         k = "P361"
       else:
         print("No type key in: " + self._values['title'])
-        ran = None
         return
 
       self._data["title"].append(self._values['title'])
       self._data["label"].append(j["labels"]["en"]["value"])
 
-      if ran != None:
-        self._data["type"].append("|".join([
-            j["claims"][k][r]["mainsnak"]["datavalue"]["value"]["id"]
-            for r in range(ran)
-        ]))
+      tmp = []
+      for r in range(ran):
+        try:
+          tmp.append(j["claims"][k][r]["mainsnak"]["datavalue"]["value"]["id"])
+        except Exception:
+          print("ID or datavalue not found {}".format(self._values['title']))
+          continue
+        # if "id" in j["claims"][k][r]["mainsnak"]["datavalue"]["value"].keys():
+        # else:
+        # print("id not found in {}".format(self._values['title']))
+        # tmp.append("-")
+
+      self._data["type"].append("|".join(tmp))
 
       self._counter += 1
       if (self._counter % self._write_after) == 0:

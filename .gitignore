@@ -6,3 +6,4 @@ stanfordnlp_resources/
 test_data/
 *.tsv
 *.csv
+saved/
