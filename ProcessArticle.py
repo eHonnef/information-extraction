@@ -13,10 +13,7 @@ class ProcessArticle:
         "wikilinks"
     ]
 
-    self.no_no = [
-        "punct", "nummod", "appos", "det", "nmod:poss", "cop", "cc", "nsubj",
-        "case"
-    ]
+    self.no_no = ["punct", "nummod", "appos", "det"]
 
     self.months = [
         datetime.date(2008, i, 1).strftime("%B").lower() for i in range(1, 13)
@@ -27,18 +24,28 @@ class ProcessArticle:
   def process_nlp(self, text):
     doc = self.nlp(text)
     def_set = set()
+    sentence = doc.sentences[0]
 
-    for sentence in doc.sentences:
-      for word in sentence.words:
-        if word.dependency_relation in self.no_no or word.lemma.lower(
-        ) in self.months:
-          continue
+    be_index = None
+    be_gov = None
 
-        governor = sentence.words[word.governor -
-                                  1].lemma if word.governor > 0 else ""
+    # find the "be" lemma
+    for word in sentence.words:
+      if word.lemma == "be":
+        be_index = int(word.index.rjust(2))
+        be_gov = word.governor
+        def_set.add(sentence.words[be_gov - 1].lemma)
+        break
 
-        def_set.add(governor)
-        def_set.add(word.lemma.lower())
+    if be_index == None or be_gov == None:
+      return "-"
+
+    # now find the realted words with the be lemma
+    for word in sentence.words:
+      if word.governor == be_gov and word.dependency_relation in [
+          "amod", "conj", "compound"
+      ]:
+        def_set.add(word.lemma)
 
     return "|".join(def_set)
 

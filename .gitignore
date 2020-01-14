@@ -1,5 +1,7 @@
 __pycache__/
-data/
+0.articles/
+1.wikidata/
+2.data/
 stanfordnlp_resources/
 test_data/
 *.tsv

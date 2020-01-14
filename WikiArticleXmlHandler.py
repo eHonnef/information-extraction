@@ -4,7 +4,7 @@ import pandas as pd
 import os
 
 
-class WikiXmlHandler(xml.sax.handler.ContentHandler):
+class WikiArticleXmlHandler(xml.sax.handler.ContentHandler):
   """Content handler for Wiki XML data using SAX"""
 
   def __init__(self, fileout, func, write_after=1000):
