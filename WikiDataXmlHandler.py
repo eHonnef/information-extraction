@@ -49,18 +49,19 @@ class WikiDataXmlHandler(xml.sax.handler.ContentHandler):
       j = json.loads(self._values['text'])
 
       if "labels" not in j.keys():
-        # no label probably means it's a redirect page
-        print("Label key not found in {}".format(self._values['title']))
+        # ignore pages without label
+        # print("Label key not found in {}".format(self._values['title']))
         return
       elif "en" not in j["labels"].keys():
-        print("No english (en) available for {}".format(self._values['title']))
+        # ignore pages without english labels
+        # print("No english (en) available for {}".format(self._values['title']))
         return
 
       ran = 0
       k = "P31"
 
       if isinstance(j["claims"], list):
-        print("it's a list (wtf?) {}".format(self._values['title']))
+        # print("it's a list (wtf?) {}".format(self._values['title']))
         return
 
       if "P31" in j["claims"].keys():
@@ -77,22 +78,22 @@ class WikiDataXmlHandler(xml.sax.handler.ContentHandler):
         k = "P361"
       else:
         print("No type key in: " + self._values['title'])
-        return
+        k = None
 
       self._data["title"].append(self._values['title'])
       self._data["label"].append(j["labels"]["en"]["value"])
 
       tmp = []
-      for r in range(ran):
-        try:
-          tmp.append(j["claims"][k][r]["mainsnak"]["datavalue"]["value"]["id"])
-        except Exception:
-          print("ID or datavalue not found {}".format(self._values['title']))
-          continue
-        # if "id" in j["claims"][k][r]["mainsnak"]["datavalue"]["value"].keys():
-        # else:
-        # print("id not found in {}".format(self._values['title']))
-        # tmp.append("-")
+      if k != None:
+        for r in range(ran):
+          try:
+            tmp.append(
+                j["claims"][k][r]["mainsnak"]["datavalue"]["value"]["id"])
+          except Exception:
+            print("ID or datavalue not found {}".format(self._values['title']))
+            continue
+      else:
+        tmp.append("-")
 
       self._data["type"].append("|".join(tmp))
 
