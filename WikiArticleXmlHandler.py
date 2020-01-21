@@ -7,7 +7,7 @@ import os
 class WikiArticleXmlHandler(xml.sax.handler.ContentHandler):
   """Content handler for Wiki XML data using SAX"""
 
-  def __init__(self, fileout, func, write_after=1000):
+  def __init__(self, fileout, func):
     xml.sax.handler.ContentHandler.__init__(self)
     self._buffer = None
     self._values = {}
@@ -18,14 +18,15 @@ class WikiArticleXmlHandler(xml.sax.handler.ContentHandler):
     # self._data = {col: [] for col in pa.cols}
     self._data = list()
     self._pa = func
-    self._write_after = write_after
     self._fileout = fileout
 
+    self._ready = False
+
     # create file to store the parsed information
-    if write_after != None:
-      if not os.path.exists(fileout):
-        pd.DataFrame(columns=self._pa.cols).to_csv(
-            self._fileout, header=True, index=False, sep="\t")
+    # if write_after != None:
+    #   if not os.path.exists(fileout):
+    #     pd.DataFrame(columns=self._pa.cols).to_csv(
+    #         self._fileout, header=True, index=False, sep="\t")
 
     # save text for debug purposes
     self._text = []
@@ -38,6 +39,7 @@ class WikiArticleXmlHandler(xml.sax.handler.ContentHandler):
 
   def startElement(self, name, attrs):
     """Opening tag of element"""
+    self._ready = False
     if name in ('title', 'text', 'timestamp'):
       self._buffer = []
       self._current_tag = name
@@ -47,10 +49,10 @@ class WikiArticleXmlHandler(xml.sax.handler.ContentHandler):
       self._redirect = True
 
   def write_df(self):
-    print("Saved to csv, current number of articles <{}>".format(self._counter))
     pd.DataFrame(
         data=self._data, columns=self._pa.cols).to_csv(
             self._fileout, mode="a", header=False, index=False, sep="\t")
+    print("Saved to csv, current number of articles <{}>".format(self._counter))
     # remove data and rebuild
     del self._data
     self._data = list()
@@ -80,8 +82,9 @@ class WikiArticleXmlHandler(xml.sax.handler.ContentHandler):
           self._data.append(lst)
           self._counter += 1
 
-          if self._write_after != None and not self._DEBUG:
-            if (self._counter % self._write_after) == 0:
-              self.write_df()
+          self._ready = True
+          # if self._write_after != None and not self._DEBUG:
+          #   if (self._counter % self._write_after) == 0:
+          #     self.write_df()
 
       self._redirect = False

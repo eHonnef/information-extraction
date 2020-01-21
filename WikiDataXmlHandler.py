@@ -7,7 +7,7 @@ import json
 class WikiDataXmlHandler(xml.sax.handler.ContentHandler):
   """Content handler for Wikidata XML data using SAX"""
 
-  def __init__(self, fileout, write_after=1000):
+  def __init__(self, fileout):
     xml.sax.handler.ContentHandler.__init__(self)
     self._buffer = None
     self._values = {}
@@ -15,10 +15,12 @@ class WikiDataXmlHandler(xml.sax.handler.ContentHandler):
     self._counter = 0
     self._redirect = False
 
-    self._write_after = write_after
+    # self._write_after = write_after
     self._fileout = fileout
 
     self._data = {"title": [], "label": [], "type": []}
+
+    self._ready = False
 
   def characters(self, content):
     """Characters between opening and closing tags"""
@@ -29,13 +31,15 @@ class WikiDataXmlHandler(xml.sax.handler.ContentHandler):
     pd.DataFrame(data=self._data).to_csv(
         self._fileout, mode="a", header=False, index=False, sep="\t")
 
-    print("Saved to csv, current number of articles <{}>".format(self._counter))
+    print("Saved to csv, current number of wikidata items <{}>".format(self._counter))
     # remove data and rebuild
     del self._data
     self._data = {"title": [], "label": [], "type": []}
 
   def startElement(self, name, attrs):
     """Opening tag of element"""
+    self._ready = False
+    
     if name in ('title', 'text'):
       self._buffer = []
       self._current_tag = name
@@ -98,5 +102,8 @@ class WikiDataXmlHandler(xml.sax.handler.ContentHandler):
       self._data["type"].append("|".join(tmp))
 
       self._counter += 1
-      if (self._counter % self._write_after) == 0:
-        self.write_df()
+
+      # sending a signal saying that it is safe to write to the file
+      self._ready = True
+      # if (self._counter % self._write_after) == 0:
+        # self.write_df()

@@ -5,13 +5,13 @@ import datetime
 
 
 class ProcessArticle:
+  cols = [
+      "title", "type", "def words", "infobox_name", "infobox", "categories",
+      "wikilinks"
+  ]
 
   def __init__(self, infoboxes, nlp):
     self.infoboxes = infoboxes
-    self.cols = [
-        "title", "type", "def words", "infobox_name", "infobox", "categories",
-        "wikilinks"
-    ]
 
     self.no_no = ["punct", "nummod", "appos", "det"]
 

@@ -53,6 +53,33 @@ def download_articles(download_folder, limit=None):
       get_file(path, dump_url + link["href"])
       print("File size: " + str(os.stat(path).st_size / 1e6) + " MB")
 
+def download_wikidata(download_folder, limit=None):
+  # It's faster if you don't use "tensorflow backend". Import when necessary.
+  from keras.utils import get_file
+
+  base_url = 'https://dumps.wikimedia.org/wikidatawiki/'
+  index = requests.get(base_url).text
+  soup_index = BeautifulSoup(index, 'html.parser')  # Find the links on the page
+  dumps = [a['href'] for a in soup_index.find_all('a') if a.has_attr('href')]
+
+  dump_url = base_url + dumps[-1]
+  dump_html = requests.get(dump_url).text
+
+  # Convert to a soup
+  soup_dump = BeautifulSoup(dump_html, 'html.parser')
+
+  # file_folder = pat
+  # Downloading only the articles
+  for link in soup_dump.find_all(
+      'a',
+      {'href': re.compile(r".*pages-articles-multistream\d*\.xml-p.*\.bz2$")},
+      limit=limit):
+    path = download_folder + link["href"]
+    if not os.path.exists(path):
+      print("Downloading: " + link["href"])
+      get_file(path, dump_url + link["href"])
+      print("File size: " + str(os.stat(path).st_size / 1e6) + " MB")
+
 
 def cleanhtml(raw_html):
   cleanr = re.compile('<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')

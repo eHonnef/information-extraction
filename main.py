@@ -14,6 +14,9 @@ from timeit import default_timer as timer
 
 import stanfordnlp
 
+import warnings
+warnings.filterwarnings('ignore')
+
 # List of lists to single list
 from itertools import chain
 # Sending keyword arguments in map
@@ -30,8 +33,11 @@ files_w = [folder_w + "/" + x for x in os.listdir(folder_w)]
 w_cols = ["title", "label", "type"]
 
 out_file = "./saved/out_parallel"
-nlp = stanfordnlp.Pipeline(models_dir="./stanfordnlp_resources/", use_gpu=False)
-func = ProcessArticle(infoboxes, nlp)
+
+n_write = 5000
+
+# nlp = stanfordnlp.Pipeline(models_dir="./stanfordnlp_resources/", use_gpu=False)
+# func = ProcessArticle(infoboxes, nlp)
 
 # lock
 l_articles = multiprocessing.Lock()
@@ -39,9 +45,9 @@ l_wikidata = multiprocessing.Lock()
 
 
 def read_wikidata(args):
-  data_path, output_file = args
+  data_path = args
 
-  handler = WikiDataXmlHandler()
+  handler = WikiDataXmlHandler(out_file + "_wikidata.csv")
   # parse obj
   parser = xml.sax.make_parser()
   parser.setContentHandler(handler)
@@ -56,6 +62,11 @@ def read_wikidata(args):
                                stdout=subprocess.PIPE).stdout:
     try:
       parser.feed(line)
+
+      if handler._ready and (handler._counter % n_write) == 0:
+        l_wikidata.acquire()
+        handler.write_df()
+        l_wikidata.release()
     except StopIteration:
       break
 
@@ -63,7 +74,7 @@ def read_wikidata(args):
   l_wikidata.acquire()
 
   # write file
-  handler.write_df(output_file)
+  handler.write_df()
 
   print("[Finished] Process PID: {}, wikidata readed {}. File: {}\n".format(
       multiprocessing.current_process().pid, handler._counter, data_path))
@@ -74,9 +85,12 @@ def read_wikidata(args):
 
 
 def read_articles(args):
-  data_path, limit = args
+  data_path = args
 
-  handler = WikiArticleXmlHandler(out_file, func, None)
+  nlp = stanfordnlp.Pipeline(models_dir="./stanfordnlp_resources/", use_gpu=False)
+  func = ProcessArticle(infoboxes, nlp)
+  
+  handler = WikiArticleXmlHandler(out_file + ".csv", func)
 
   # parse obj
   parser = xml.sax.make_parser()
@@ -92,10 +106,12 @@ def read_articles(args):
                                stdout=subprocess.PIPE).stdout:
     try:
       parser.feed(line)
-    except StopIteration:
-      break
 
-    if limit is not None and handler._counter >= limit:
+      if handler._ready and (handler._counter % n_write) == 0:
+        l_articles.acquire()
+        handler.write_df()
+        l_articles.release()
+    except StopIteration:
       break
 
   # acquire lock to write file
@@ -118,7 +134,7 @@ def read_articles(args):
 
 if __name__ == "__main__":
   if not os.path.exists(out_file + ".csv"):
-    pd.DataFrame(columns=func.cols).to_csv(
+    pd.DataFrame(columns=ProcessArticle.cols).to_csv(
         out_file + ".csv", header=True, index=False, sep="\t")
 
   if not os.path.exists(out_file + "_wikidata.csv"):
@@ -132,11 +148,11 @@ if __name__ == "__main__":
   start = timer()
 
   # Map (service, tasks), applies function to each partition
-  f = [(x, None) for x in files_a]
-  pool1.map_async(read_articles, f)
+  # f = [(x, None) for x in files_a]
+  pool1.map_async(read_articles, files_a)
 
-  f = [(x, None) for x in files_w]
-  pool2.map_async(read_wikidata, f)
+  # f = [(x, None) for x in files_w]
+  pool2.map_async(read_wikidata, files_w)
 
   pool1.close()
   pool2.close()
